@@ -1,0 +1,19 @@
+name: nfc_card_manager
+description: A complete NFC Card Vault, chip identifier, deep inspector, editor, writer, and tap-to-unlock emulator with biometrics and audit logs.
+version: 1.0.0+1
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  nfc_manager: ^3.3.0
+  encrypt: ^5.0.3
+  crypto: ^3.0.3
+  shared_preferences: ^2.2.2
+  local_auth: ^2.2.0
+
+flutter:
+  uses-material-design: true

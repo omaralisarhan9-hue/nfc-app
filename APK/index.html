@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>مدير بطاقات NFC الذكي | NFC Card Manager</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="icon-badge">📡</div>
+      <h1>مدير بطاقات NFC</h1>
+      <p class="subtitle">قراءة، فحص، تعديل وإعادة كتابة البيانات على البطاقات</p>
+      <div id="nfcSupportBadge" class="support-badge">جاري التحقق من دعم NFC...</div>
+    </header>
+
+    <!-- Controls / Action Buttons -->
+    <div class="actions-grid">
+      <button id="btnScan" class="btn btn-primary">
+        <span class="btn-icon">🔍</span>
+        <span>قراءة البطاقة (Scan)</span>
+      </button>
+      <button id="btnWrite" class="btn btn-success" disabled>
+        <span class="btn-icon">✍️</span>
+        <span>حفظ وكتابة التعديل (Write)</span>
+      </button>
+      <button id="btnWipeTag" class="btn btn-danger">
+        <span class="btn-icon">🗑️</span>
+        <span>مسح البطاقة تماماً (Format)</span>
+      </button>
+    </div>
+
+    <!-- Status Banner -->
+    <div id="statusBox" class="status-box hidden">
+      <div class="spinner hidden" id="spinner"></div>
+      <p id="statusMsg">اضغط على "قراءة البطاقة" ثم قرّب البطاقة من ظهر هاتفك.</p>
+    </div>
+
+    <!-- Card Details & Editor Section -->
+    <main class="card-manager">
+      <section class="card-info">
+        <h2>معلومات وتحليل البطاقة العميقة</h2>
+        <div class="info-row">
+          <span class="info-label">المعرف الفريد (UID / Serial):</span>
+          <span id="cardSerial" class="info-val">لم يتم المسح بعد</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">نوع السجل وحجمه (Records & Size):</span>
+          <span id="recordType" class="info-val">-</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">حالة قابلية التعديل (Writable Check):</span>
+          <span id="writableStatus" class="badge-plain">لم تفحص بعد</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">حالة التشفير الحالية:</span>
+          <span id="encryptionStatusBadge" class="badge-plain">غير مفحوص</span>
+        </div>
+        <div class="probe-actions">
+          <button id="btnProbeWritable" class="btn btn-outline btn-sm" disabled>
+            ⚡ فحص إمكانية التعديل والكتابة (Test Writable)
+          </button>
+        </div>
+      </section>
+
+      <!-- Encryption & Security Settings -->
+      <section class="security-section">
+        <h2>🔐 إعدادات التشفير وفك التشفير (AES-256)</h2>
+        <div class="input-group">
+          <label for="secretKey">المفتاح السري لفك/تشفير البيانات (Passphrase / Secret Key):</label>
+          <div class="key-input-wrapper">
+            <input type="password" id="secretKey" class="form-control" placeholder="أدخل كلمة المرور أو مفتاح الأمان السري..." value="MySecretPassphrase123">
+            <button id="btnToggleKey" type="button" class="btn-toggle-eye" title="إظهار/إخفاء المفتاح">👁️</button>
+          </div>
+          <small class="help-text">يُستخدم هذا المفتاح لتشفير البيانات بخوارزمية AES-GCM، ولن يتمكن أي شخص يقرأ البطاقة بدون هذا المفتاح من قراءة محتواها.</small>
+        </div>
+        <div class="checkbox-group">
+          <label class="switch-label">
+            <input type="checkbox" id="enableEncryption" checked>
+            <span>تفعيل التشفير عند الكتابة (Encrypt before write)</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="editor-section">
+        <h2>استعراض القيم ومحاولة التعديل عليها</h2>
+        
+        <div class="tabs">
+          <button id="tabPlain" class="tab-btn active">القيم المفكوكة (Decrypted / Text)</button>
+          <button id="tabHex" class="tab-btn">محلل القيم الثنائية (Hex Dump)</button>
+          <button id="tabRaw" class="tab-btn">النص الخام (Raw Ciphertext)</button>
+        </div>
+
+        <div id="plainView">
+          <div class="input-group">
+            <label for="cardContent">القيم المستخرجة (يمكنك تعديلها هنا مباشرة):</label>
+            <textarea id="cardContent" class="form-control" rows="5" placeholder="ستظهر هنا القيم الموجودة في البطاقة لتتمكن من معرفتها وتعديلها..."></textarea>
+          </div>
+        </div>
+
+        <div id="hexView" class="hidden">
+          <div class="input-group">
+            <label for="hexCardContent">تحليل البايتات الخام (Hexadecimal Representation):</label>
+            <textarea id="hexCardContent" class="form-control code-font" rows="5" readonly placeholder="عرض البايتات بنظام الـ Hex Dump لتحليل القيم غير النصية أو المشفرة..."></textarea>
+          </div>
+        </div>
+
+        <div id="rawView" class="hidden">
+          <div class="input-group">
+            <label for="rawCardContent">المحتوى الخام المخزن في شريحة البطاقة (Ciphertext):</label>
+            <textarea id="rawCardContent" class="form-control code-font" rows="5" readonly placeholder="النص المشفر الفعلي الموجود على البطاقة..."></textarea>
+          </div>
+        </div>
+
+        <div class="editor-actions">
+          <button id="btnDecryptManual" class="btn btn-secondary">إعادة فك التشفير بالمفتاح الحالي</button>
+          <button id="btnQuickSample" class="btn btn-outline">نموذج بيانات حساب/عضوية</button>
+          <button id="btnClear" class="btn btn-link">تفريغ</button>
+        </div>
+      </section>
+
+      <!-- History of Scanned / Edited Cards -->
+      <section class="history-section">
+        <div class="history-header">
+          <h2>سجل البطاقات المحفوظة</h2>
+          <div class="history-header-actions">
+            <div class="history-filters">
+              <button id="filterAllCards" class="chip-filter active">الكل</button>
+              <button id="filterStarredCards" class="chip-filter">المهم ⭐ <span id="starredCount" class="badge-count">0</span></button>
+            </div>
+            <button id="btnClearHistory" class="btn-link">مسح السجل</button>
+          </div>
+        </div>
+        <div id="historyList" class="history-list">
+          <p class="empty-state">لا يوجد بطاقات مسجلة حتى الآن.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>💡 ملاحظة: تتطلب ميزة Web NFC متصفح <strong>Google Chrome على نظام Android</strong> مع تفعيل خاصية NFC في الهاتف.</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
